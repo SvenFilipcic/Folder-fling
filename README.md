@@ -1,6 +1,6 @@
-# Training Guide — UniGarmentManip (majca)
+# Training Guide — folder3000
 
-Train a PointNet++ model to find grasp points on crumpled clothing.
+Training a PointNet++ model for point recognition. Using GarmentLab's unigarmentmanip.
 
 ---
 
@@ -26,17 +26,13 @@ data/majca/0_majca/majca_0001.npz
 ...
 ```
 
-The folder must exist and contain at least a few hundred `.npz` files for reasonable results.
-For a proper training run: **1000–4000 samples**.
-
 ---
 
-## 3. Configure hyperparameters
+## 3. Parameters 
 
 Edit `unigarmentmanip/train/base/config.py`:
 
-| Parameter | Local test | A8000 full run |
-|-----------|-----------|----------------|
+|   parameter | test - run | full run |
 | `batch_size` | 32 | 128 |
 | `batch_num` | 200 | 3000 |
 | `epoch` | 5 | 50 |
@@ -50,7 +46,7 @@ Edit `unigarmentmanip/train/base/config.py`:
 # From scratch
 python3 train_majca.py
 
-# Resume from a checkpoint
+# Resume from a checkpoint epoch_4 args:
 python3 train_majca.py --resume unigarmentmanip/checkpoints/majca/checkpoint_epoch_4.pth
 ```
 
@@ -78,9 +74,6 @@ python3 test/model_test.py --start 0 --count 10
 python3 test/model_test.py --checkpoint unigarmentmanip/checkpoints/majca/checkpoint_epoch_8.pth --count 5
 ```
 
-- **Green sphere** = left sleeve grasp point
-- **Red sphere** = right sleeve grasp point
-
 Close the Open3D window to advance to the next sample.
 
 ---
@@ -93,9 +86,7 @@ Close the Open3D window to advance to the next sample.
 
 ---
 
-## Multi-GPU (A8000)
-
-No changes needed — `DataParallel` is auto-detected. Just bump `batch_size` and `num_workers` in `config.py`.
+## Multi-GPU 
 
 To run on specific GPUs:
 ```bash
