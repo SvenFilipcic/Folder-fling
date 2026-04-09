@@ -10,14 +10,16 @@ from Env.Utils.pointcloud import furthest_point_sampling, normalize_pcd_points
 
 class UniGarmentManip_Encapsulation:
 
-    def __init__(self, catogory:str="Tops_LongSleeve"):
+    def __init__(self, catogory:str="Tops_LongSleeve", checkpoint_override:str=None):
         '''
         load model
         '''
         self.catogory = catogory
         # set resume path
         checkpoints_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "checkpoints")
-        if catogory == "majca":
+        if checkpoint_override:
+            resume_path = checkpoint_override
+        elif catogory == "majca":
             resume_path = os.path.join(checkpoints_dir, "majca", "checkpoint_epoch_8.pth")
         else:
             resume_path = os.path.join(checkpoints_dir, self.catogory, "checkpoint.pth")
