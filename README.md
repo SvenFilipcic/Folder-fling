@@ -1,6 +1,6 @@
 # Training Guide — folder3000
 
-Training a PointNet++ model for point recognition. Using GarmentLab's unigarmentmanip.
+Training a PointNet++ model for point recognition. Using GarmentLab's unigarmentmanip AI architecture.
 
 ---
 
