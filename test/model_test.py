@@ -1,10 +1,3 @@
-"""
-test_inference.py  —  Run UniGarmentManip on a saved .npz file and visualize results
-
-Usage:
-    python3 test/test_inference.py data/majca/0_majca/majca_0012.npz
-"""
-
 import sys
 import os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

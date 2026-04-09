@@ -1,22 +1,3 @@
-"""
-data_gen.py  —  Generate training data for UniGarmentManip retraining
-
-For each sample:
-  - Random orientation drop → settle → raycast occlusion → FPS 2048
-  - Save .npz with mesh_points (full), pcd_points (2048), visible_mesh_indices
-
-Output structure (matches dataloader_only_cd.py expectations):
-  data/majca/
-      0_majca/
-          majca_0000.npz
-          majca_0001.npz
-          ...
-
-Run:
-    PYTHON_PATH test/data_gen.py
-    PYTHON_PATH test/data_gen.py --samples 2000
-"""
-
 import sys, os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)

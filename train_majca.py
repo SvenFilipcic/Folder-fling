@@ -1,14 +1,3 @@
-"""
-train_majca.py  —  Launch UniGarmentManip retraining on majca data
-
-Handles sys.path so relative imports inside unigarmentmanip/train/ work.
-Saves checkpoints to:  unigarmentmanip/checkpoints/majca/
-
-Run:
-    python3 train_majca.py                         # train from scratch
-    python3 train_majca.py --resume unigarmentmanip/checkpoints/majca/checkpoint_epoch_4.pth
-"""
-
 import sys, os, argparse
 
 parser = argparse.ArgumentParser()
