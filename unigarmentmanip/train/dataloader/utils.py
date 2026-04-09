@@ -23,7 +23,10 @@ def get_deformation_paths(root_dir, garment_data_num, train_ratio, mode: str=Non
                 print(len(paths))
                 deformation_paths.append(paths)
 
-    deformation_paths = sorted(deformation_paths, key=lambda paths: int(paths[0].split('/')[-2].split('_')[0]))
+    def sort_key(paths):
+        prefix = paths[0].split('/')[-2].split('_')[0]
+        return int(prefix) if prefix.isdigit() else prefix
+    deformation_paths = sorted(deformation_paths, key=sort_key)
     print(len(deformation_paths))
     
     if garment_data_num is not None:
