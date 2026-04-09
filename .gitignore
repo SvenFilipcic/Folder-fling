@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Training data — bring on USB, don't commit
+data/majca/0_majca/*.npz
+
+# Generated checkpoints — bring on USB if resuming
+unigarmentmanip/checkpoints/majca/*.pth
+
+# Wandb logs
+wandb/
+
+# Misc
+.DS_Store
+*.egg-info/
