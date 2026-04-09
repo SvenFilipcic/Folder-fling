@@ -92,3 +92,102 @@ To run on specific GPUs:
 ```bash
 CUDA_VISIBLE_DEVICES=0,1 python3 train_majca.py
 ```
+
+---
+
+---
+
+# Navodila za uporabo — folder3000
+
+Učenje modela PointNet++ za prepoznavanje točk na oblačilu. Uporablja GarmentLabovo AI arhitekturo unigarmentmanip.
+
+---
+
+## 1. Kloniranje in namestitev okolja
+
+```bash
+git clone https://github.com/SvenFilipcic/Folder-fling.git
+cd Folder-fling
+
+conda env create -f environment.yml
+conda activate cloth-train
+```
+
+---
+
+## 2. Dodajanje učnih podatkov
+
+Kopiraj `.npz` datoteke (generirane z `data_gen.py` na računalniku z Isaac Sim) v:
+
+```
+data/majca/0_majca/majca_0000.npz
+data/majca/0_majca/majca_0001.npz
+...
+```
+
+---
+
+## 3. Parametri
+
+Uredi `unigarmentmanip/train/base/config.py`:
+
+|   parameter | testni zagon | poln zagon |
+| `batch_size` | 32 | 128 |
+| `batch_num` | 200 | 3000 |
+| `epoch` | 5 | 50 |
+| `num_workers` | 4 | 8 |
+
+---
+
+## 4. Učenje
+
+```bash
+# Od začetka
+python3 train_majca.py
+
+# Nadaljevanje iz kontrolne točke epoch_4:
+python3 train_majca.py --resume unigarmentmanip/checkpoints/majca/checkpoint_epoch_4.pth
+```
+
+Kontrolne točke se shranijo v `unigarmentmanip/checkpoints/majca/`:
+- `checkpoint_epoch_N.pth` — shranjeno po vsakih 2 epohah
+- `checkpoint_batch_N.pth` — shranjeno vsakih 100 batch-ov
+
+wandb se uporablja za beleženje. Za zagon brez računa:
+```bash
+wandb offline
+python3 train_majca.py
+```
+
+---
+
+## 5. Vizualizacija rezultatov
+
+Poženi inferenco na shranjenih `.npz` datotekah in prikaži točke prijema v Open3D:
+
+```bash
+# Prikaži 10 vzorcev od začetka
+python3 test/model_test.py --start 0 --count 10
+
+# Uporabi specifično kontrolno točko
+python3 test/model_test.py --checkpoint unigarmentmanip/checkpoints/majca/checkpoint_epoch_8.pth --count 5
+```
+
+Zapri okno Open3D za prehod na naslednji vzorec.
+
+---
+
+## 6. Kar model potrebuje za delovanje
+
+- `unigarmentmanip/checkpoints/majca/majca_flat_reference.ply` — referenčni oblak točk ravnega oblačila (že vključen)
+- Naučena kontrolna točka `.pth` v `unigarmentmanip/checkpoints/majca/`
+- `.npz` datoteke s `pcd_points` (2048, 3) — oblak točk zmečkanega oblačila
+
+---
+
+## Več grafičnih kartic
+
+Za zagon na specifičnih GPU-jih:
+```bash
+CUDA_VISIBLE_DEVICES=0,1 python3 train_majca.py
+```
