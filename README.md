@@ -99,11 +99,11 @@ CUDA_VISIBLE_DEVICES=0,1 python3 train_majca.py
 
 # Navodila za uporabo — folder3000
 
-Učenje modela PointNet++ za prepoznavanje točk na oblačilu. Uporablja GarmentLabovo AI arhitekturo unigarmentmanip.
+Učenje modela PointNet++ za prepoznavanje točk na oblačilu. Uporablja GarmentLab AI arhitekturo unigarmentmanip.
 
 ---
 
-## 1. Kloniranje in namestitev okolja
+## 1. Namestitev okolja
 
 ```bash
 git clone https://github.com/SvenFilipcic/Folder-fling.git
@@ -115,9 +115,9 @@ conda activate cloth-train
 
 ---
 
-## 2. Dodajanje učnih podatkov
+## 2. Dodajanje samplov
 
-Kopiraj `.npz` datoteke (generirane z `data_gen.py` na računalniku z Isaac Sim) v:
+Kopiraj `.npz` datoteke v:
 
 ```
 data/majca/0_majca/majca_0000.npz
@@ -149,11 +149,11 @@ python3 train_majca.py
 python3 train_majca.py --resume unigarmentmanip/checkpoints/majca/checkpoint_epoch_4.pth
 ```
 
-Kontrolne točke se shranijo v `unigarmentmanip/checkpoints/majca/`:
+pth datoteke se shranijo v `unigarmentmanip/checkpoints/majca/`:
 - `checkpoint_epoch_N.pth` — shranjeno po vsakih 2 epohah
 - `checkpoint_batch_N.pth` — shranjeno vsakih 100 batch-ov
 
-wandb se uporablja za beleženje. Za zagon brez računa:
+wandb se uporablja za beleženje;
 ```bash
 wandb offline
 python3 train_majca.py
@@ -173,13 +173,11 @@ python3 test/model_test.py --start 0 --count 10
 python3 test/model_test.py --checkpoint unigarmentmanip/checkpoints/majca/checkpoint_epoch_8.pth --count 5
 ```
 
-Zapri okno Open3D za prehod na naslednji vzorec.
-
 ---
 
 ## 6. Kar model potrebuje za delovanje
 
-- `unigarmentmanip/checkpoints/majca/majca_flat_reference.ply` — referenčni oblak točk ravnega oblačila (že vključen)
+- `unigarmentmanip/checkpoints/majca/majca_flat_reference.ply` — referenčni oblak točk ravnega oblačila
 - Naučena kontrolna točka `.pth` v `unigarmentmanip/checkpoints/majca/`
 - `.npz` datoteke s `pcd_points` (2048, 3) — oblak točk zmečkanega oblačila
 
