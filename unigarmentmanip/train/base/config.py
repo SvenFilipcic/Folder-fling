@@ -36,7 +36,7 @@ class train_Config:
         self.correspondence_num=30   #######
         self.feature_dim=512
         self.distance_threshold=0.05   # ##
-        self.batch_num=3000
+        self.batch_num=500
         self.fine_num=150
         self.fine_negative=150
         self.smooth_num=64
