@@ -47,7 +47,7 @@ if resume:
     _ckpt = _torch.load(resume, map_location="cpu", weights_only=False)
     if "model_state_dict" not in _ckpt:
         _cfg = _Config().train_config
-        _model = _Sofa(feature_dim=_cfg.feature_dim)
+        _model = _Sofa(normal_channel=True, feature_dim=_cfg.feature_dim)
         _model.load_state_dict(_ckpt, strict=False)
         _opt = _torch.optim.Adam(_model.parameters(), lr=_cfg.lr, weight_decay=_cfg.weight_decay)
         _wrapped = {"model_state_dict": _ckpt, "optimizer": _opt}

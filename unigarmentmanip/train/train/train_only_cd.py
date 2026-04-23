@@ -42,7 +42,7 @@ def train(checkpoint_dir:str, resume_path:str=None):
                                  num_workers=config.num_workers)
       
     
-    model=Sofa_Model(feature_dim=config.feature_dim)
+    model=Sofa_Model(normal_channel=True, feature_dim=config.feature_dim)
 
     if resume_path:
         print("resume from {}".format(resume_path))

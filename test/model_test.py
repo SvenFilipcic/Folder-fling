@@ -34,7 +34,7 @@ parser.add_argument("--count",      type=int, default=10,   help="Number of samp
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint .pth (default: latest majca)")
 args = parser.parse_args()
 
-NPZ_FOLDER = os.path.join(PROJECT_ROOT, "data/majca/0_majca")
+NPZ_FOLDER = os.path.join(PROJECT_ROOT, "data/majca/majca_1")
 
 all_files = sorted([f for f in os.listdir(NPZ_FOLDER) if f.endswith(".npz")])
 files_to_run = all_files[args.start:args.start + args.count]
@@ -46,6 +46,7 @@ for file_name in files_to_run:
     npz_path = os.path.join(NPZ_FOLDER, file_name)
     data     = np.load(npz_path)
     points   = data["pcd_points"]
+    xyz      = points[:, :3]
     print(f"\n--- {file_name} ({len(points)} pts) ---")
 
     _, indices = manip.get_manipulation_points(
@@ -53,13 +54,13 @@ for file_name in files_to_run:
         index_list=[LEFT_GROUP, RIGHT_GROUP],
     )
 
-    left_grasp  = points[indices[0]]
-    right_grasp = points[indices[1]]
+    left_grasp  = xyz[indices[0]]
+    right_grasp = xyz[indices[1]]
     print(f"Left grasp:  {np.round(left_grasp,  4)}")
     print(f"Right grasp: {np.round(right_grasp, 4)}")
 
     pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.points = o3d.utility.Vector3dVector(xyz)
     pcd.paint_uniform_color([0.2, 0.6, 1.0])
 
     o3d.visualization.draw_geometries(

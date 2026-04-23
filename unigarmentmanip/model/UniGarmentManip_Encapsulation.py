@@ -32,7 +32,7 @@ class UniGarmentManip_Encapsulation:
         random.seed(seed)
         # define model
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = UniGarmentManip_Model(normal_channel=False, feature_dim=512).cuda()
+        self.model = UniGarmentManip_Model(normal_channel=True, feature_dim=512).cuda()
         ckpt = torch.load(resume_path, weights_only=False)
         state = ckpt['model_state_dict'] if isinstance(ckpt, dict) and 'model_state_dict' in ckpt else ckpt
         self.model.load_state_dict(state)
@@ -44,7 +44,15 @@ class UniGarmentManip_Encapsulation:
         '''
         get feature of input point cloud
         '''
-        normalized_pcd, *_ = normalize_pcd_points(input_pcd)
+        normalized_pcd, *_ = normalize_pcd_points(input_pcd[:, :3])
+        if input_pcd.shape[1] < 6:
+            pcd_o3d = o3d.geometry.PointCloud()
+            pcd_o3d.points = o3d.utility.Vector3dVector(normalized_pcd)
+            pcd_o3d.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+            normals = np.asarray(pcd_o3d.normals).astype(np.float32)
+            normalized_pcd = np.concatenate([normalized_pcd, normals], axis=1)
+        else:
+            normalized_pcd = np.concatenate([normalized_pcd, input_pcd[:, 3:6].astype(np.float32)], axis=1)
         normalize_pcd = np.expand_dims(normalized_pcd, axis=0)
 
         with torch.no_grad():
