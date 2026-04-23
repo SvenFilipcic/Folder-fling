@@ -19,7 +19,7 @@ class UniGarmentManip_Model(nn.Module):
         self.normal_channel = normal_channel
         self.sa1 = PointNetSetAbstraction(npoint=1024, radius=0.2, nsample=32, in_channel=6+additional_channel, mlp=[64, 64, 128], group_all=False)
         self.sa2 = PointNetSetAbstraction(npoint=512, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
-        self.sa3 = PointNetSetAbstraction(npoint=256, radius=0.8, nsample=128, in_channel=256 + 3, mlp=[256, 512, 512], group_all=False)
+        self.sa3 = PointNetSetAbstraction(npoint=256, radius=0.8, nsample=64, in_channel=256 + 3, mlp=[256, 512, 512], group_all=False)
         self.sa4 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=512 + 3, mlp=[512, 512, 1024], group_all=True)
         self.fp4 = PointNetFeaturePropagation(in_channel=1536, mlp=[512, 256])
         self.fp3 = PointNetFeaturePropagation(in_channel=512, mlp=[256, 256])
