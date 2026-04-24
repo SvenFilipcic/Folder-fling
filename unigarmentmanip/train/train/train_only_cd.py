@@ -42,7 +42,7 @@ def train(checkpoint_dir:str, resume_path:str=None):
                                  num_workers=config.num_workers)
       
     
-    model=Sofa_Model(normal_channel=True, feature_dim=config.feature_dim)
+    model=Sofa_Model(normal_channel=False, feature_dim=config.feature_dim)
 
     if resume_path:
         print("resume from {}".format(resume_path))
@@ -60,7 +60,6 @@ def train(checkpoint_dir:str, resume_path:str=None):
 
     # produce loss function
     criterion=InfoNCE(negative_mode='paired',temperature=config.temperature)
-    scaler=torch.cuda.amp.GradScaler()
 
     
     wandb.init(project="scarf", 
@@ -81,8 +80,8 @@ def train(checkpoint_dir:str, resume_path:str=None):
         total_loss=0
         with tqdm(enumerate(train_dataloader), total=train_length, desc=f"Epoch {epoch + 1}/{config.epoch}", disable=False) as t:
             for i, (pc1, pc2, correspondence) in t:
-                # pc1 batchsize*num_points*6  (XYZ + normals, normalized)
-                # pc2 batchsize*num_points*6
+                # pc1 batchsize*num_points*3  (XYZ, normalized)
+                # pc2 batchsize*num_points*3
                 # correspondence batchsize*num_correspondence*2
                 batchsize=pc1.shape[0]
                 num_points=pc1.shape[1]
@@ -93,36 +92,30 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 correspondence=correspondence.to(config.device)
 
 
-                with torch.cuda.amp.autocast():
-                    #pc1_output batchsize*num_points*feature_dim
-                    #pc2_output batchsize*num_points*feature_dim
-                    pc1_output=model(pc1)
-                    pc2_output=model(pc2)
-                    feature_dim=pc1_output.shape[2]
+                #pc1_output batchsize*num_points*feature_dim
+                #pc2_output batchsize*num_points*feature_dim
+                pc1_output=model(pc1)
+                pc2_output=model(pc2)
+                feature_dim=pc1_output.shape[2]
 
-                    batch_index=torch.arange(0,pc1.shape[0])
+                query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
+                positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
 
-                    query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
-                    positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
+                negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
+                negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
+                negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
+                negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
 
-                    negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
-                    negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
-                    negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
-                    negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
+                num_negative=negative.shape[2]
+                query=query.reshape(batchsize*num_correspondence,feature_dim)
+                positive=positive.reshape(batchsize*num_correspondence,feature_dim)
+                negative=negative.reshape(batchsize*num_correspondence,num_negative,feature_dim)
 
-                    num_negative=negative.shape[2]
-                    query=query.reshape(batchsize*num_correspondence,feature_dim)
-                    positive=positive.reshape(batchsize*num_correspondence,feature_dim)
-                    negative=negative.reshape(batchsize*num_correspondence,num_negative,feature_dim)
-
-                    loss=criterion(query,positive,negative)
-
+                loss=criterion(query,positive,negative)
                 optimizer.zero_grad()
-                scaler.scale(loss).backward()
-                scaler.unscale_(optimizer)
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                scaler.step(optimizer)
-                scaler.update()
+                optimizer.step()
 
                 total_loss+=loss.item()
 
