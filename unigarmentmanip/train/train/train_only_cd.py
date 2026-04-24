@@ -60,6 +60,7 @@ def train(checkpoint_dir:str, resume_path:str=None):
 
     # produce loss function
     criterion=InfoNCE(negative_mode='paired',temperature=config.temperature)
+    scaler=torch.cuda.amp.GradScaler()
 
     
     wandb.init(project="scarf", 
@@ -92,55 +93,36 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 correspondence=correspondence.to(config.device)
 
 
-                #pc1_output batchsize*num_points*feature_dim
-                #pc2_output batchsize*num_points*feature_dim
-                pc1_output=model(pc1)
-                pc2_output=model(pc2)
-                feature_dim=pc1_output.shape[2]
+                with torch.cuda.amp.autocast():
+                    #pc1_output batchsize*num_points*feature_dim
+                    #pc2_output batchsize*num_points*feature_dim
+                    pc1_output=model(pc1)
+                    pc2_output=model(pc2)
+                    feature_dim=pc1_output.shape[2]
 
+                    batch_index=torch.arange(0,pc1.shape[0])
 
+                    query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
+                    positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
 
-                batch_index=torch.arange(0,pc1.shape[0])
+                    negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
+                    negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
+                    negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
+                    negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
 
-                # query batchsize*num_correspondence*feature_dim
-                # query=torch.stack([pc1_output[batch_index,correspondence[:,i,0]]for i in range(correspondence.shape[1])],dim=1)
-                # print("query shape",query.shape)
-                query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
+                    num_negative=negative.shape[2]
+                    query=query.reshape(batchsize*num_correspondence,feature_dim)
+                    positive=positive.reshape(batchsize*num_correspondence,feature_dim)
+                    negative=negative.reshape(batchsize*num_correspondence,num_negative,feature_dim)
 
+                    loss=criterion(query,positive,negative)
 
-                # positive batchsize*num_correspondence*feature_dim
-                # positive=torch.stack([pc2_output[batch_index,correspondence[:,i,1]]for i in range(correspondence.shape[1])],dim=1)
-                # print("positive shape",positive.shape)
-                positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
-
-
-
-                # negative batchsize*num_correspondence*num_negative*feature_dim
-                # negative here is random select not in correspondence
-                # negative_index batchsize*num_correspondence*num_negative
-                # print(f"num_points: {num_points}, batchsize: {batchsize}, num_correspondence: {num_correspondence}")
-                # assert num_points > 0, "num_points must be positive"
-                # assert num_points > config.num_negative, "num_points must be greater than config.num_negative"
-
-                # print(f"num_points: {num_points}, config.num_negative: {config.num_negative}")
-                negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
-                negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
-                negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
-                negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
-                # print("negative shape",negative.shape)
-
-
-                num_negative=negative.shape[2]
-                query=query.reshape(batchsize*num_correspondence,feature_dim)
-                positive=positive.reshape(batchsize*num_correspondence,feature_dim)
-                negative=negative.reshape(batchsize*num_correspondence,num_negative,feature_dim)
-
-
-                loss=criterion(query,positive,negative)
                 optimizer.zero_grad()
-                loss.backward()
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
 
                 total_loss+=loss.item()
 
