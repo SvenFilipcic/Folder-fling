@@ -26,7 +26,7 @@ class data_Config:
 class train_Config:
     def __init__(self):
         self.lr=0.0001
-        self.batch_size=128
+        self.batch_size=64
         self.epoch=50
         self.num_workers=8
         self.weight_decay=1e-5
