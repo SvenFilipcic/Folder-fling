@@ -5,6 +5,23 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+
+def _normalize_pc(pc: np.ndarray) -> np.ndarray:
+    """Center XYZ to zero-mean unit sphere; re-normalize normal vectors to unit length."""
+    pc = pc.copy()
+    xyz = pc[:, :3]
+    centroid = xyz.mean(axis=0)
+    xyz -= centroid
+    scale = np.max(np.linalg.norm(xyz, axis=1))
+    if scale > 0:
+        xyz /= scale
+    pc[:, :3] = xyz
+    if pc.shape[1] > 3:
+        lengths = np.linalg.norm(pc[:, 3:6], axis=1, keepdims=True)
+        lengths = np.where(lengths == 0, 1.0, lengths)
+        pc[:, 3:6] /= lengths
+    return pc
+
 from dataloader.utils import get_deformation_paths, create_cross_deformation_pairs, create_cross_object_pairs, fps_with_selected, nearest_mesh2pcd, create_cross_only_deformation_pairs
 from base.config import Config
 
@@ -89,14 +106,14 @@ class Dataset(Dataset):
     
     
     def get_cross_deformation_pair(self, index):
-        
+
         npz1, npz2 = self.cross_deformation_pair_path[index]
         npz1 = np.load(npz1)
         npz2 = np.load(npz2)
-        pc1= npz1['pcd_points']
-        pc2= npz2['pcd_points']
+        pc1 = _normalize_pc(npz1['pcd_points'])
+        pc2 = _normalize_pc(npz2['pcd_points'])
         correspondence = self.get_cross_deformation_correspondence(index)
-        
+
         return pc1, pc2, correspondence
 
 

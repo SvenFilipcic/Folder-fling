@@ -4,10 +4,10 @@ __pycache__/
 *.pyd
 
 # Training data — bring on USB, don't commit
-data/majca/0_majca/*.npz
+data/majca/**/*.npz
 
 # Generated checkpoints — bring on USB if resuming
-unigarmentmanip/checkpoints/majca/*.pth
+unigarmentmanip/checkpoints/
 
 # Wandb logs
 wandb/

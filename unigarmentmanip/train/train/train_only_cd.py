@@ -80,8 +80,8 @@ def train(checkpoint_dir:str, resume_path:str=None):
         total_loss=0
         with tqdm(enumerate(train_dataloader), total=train_length, desc=f"Epoch {epoch + 1}/{config.epoch}", disable=False) as t:
             for i, (pc1, pc2, correspondence) in t:
-                # pc1 batchsize*num_points*3
-                # pc2 batchsize*num_points*3
+                # pc1 batchsize*num_points*6  (XYZ + normals, normalized)
+                # pc2 batchsize*num_points*6
                 # correspondence batchsize*num_correspondence*2
                 batchsize=pc1.shape[0]
                 num_points=pc1.shape[1]
@@ -139,6 +139,7 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 loss=criterion(query,positive,negative)
                 optimizer.zero_grad()
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
                 total_loss+=loss.item()

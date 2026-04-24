@@ -4,6 +4,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
 args = parser.parse_args()
 
+# Resolve before os.chdir so relative paths given by the user still work
+if args.resume:
+    args.resume = os.path.abspath(args.resume)
+
 TRAIN_DIR      = os.path.join(os.path.dirname(__file__), "unigarmentmanip", "train", "train")
 BASE_DIR       = os.path.join(os.path.dirname(__file__), "unigarmentmanip", "train")
 MODEL_DIR      = os.path.join(os.path.dirname(__file__), "unigarmentmanip", "train", "model")
