@@ -111,8 +111,8 @@ class Dataset(Dataset):
         npz1, npz2 = self.cross_deformation_pair_path[index]
         npz1 = np.load(npz1)
         npz2 = np.load(npz2)
-        pc1 = npz1['pcd_points'][:, :3].copy()
-        pc2 = npz2['pcd_points'][:, :3].copy()
+        pc1 = npz1['pcd_points'][:, :3]
+        pc2 = npz2['pcd_points'][:, :3]
         correspondence = self.get_cross_deformation_correspondence(index)
 
         return pc1, pc2, correspondence
