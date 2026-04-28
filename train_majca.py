@@ -2,6 +2,7 @@ import sys, os, argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
+parser.add_argument("--finetune", action="store_true", help="Finetune with hard negatives and lower lr")
 args = parser.parse_args()
 
 # Resolve before os.chdir so relative paths given by the user still work
@@ -63,4 +64,4 @@ if resume:
 else:
     print("Training from scratch (random init)")
 
-train(CHECKPOINT_DIR, resume_path=resume)
+train(CHECKPOINT_DIR, resume_path=resume, finetune=args.finetune)

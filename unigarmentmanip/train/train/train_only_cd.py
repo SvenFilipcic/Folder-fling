@@ -31,25 +31,29 @@ class DataLoaderX(DataLoader):
         return BackgroundGenerator(super().__iter__())
 
 
-def train(checkpoint_dir:str, resume_path:str=None):
+def train(checkpoint_dir:str, resume_path:str=None, finetune:bool=False):
     # produce dataset train val dataloader
     train_dataset=Dataset("train")
     print("load dataset successfully")
-        
+
     train_dataloader=DataLoader(train_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=True,
                                  num_workers=0)
-      
-    
+
+
     model=Sofa_Model(feature_dim=config.feature_dim)
 
-    if resume_path:
+    ckpt = torch.load(resume_path, map_location=config.device, weights_only=False) if resume_path else None
+
+    if ckpt:
         print("resume from {}".format(resume_path))
-        model.load_state_dict(torch.load(resume_path,map_location=config.device,weights_only=False)['model_state_dict'])
-        optimizer=torch.load(resume_path,map_location=config.device,weights_only=False)['optimizer']
+        model.load_state_dict(ckpt['model_state_dict'])
+        optimizer = ckpt['optimizer']
+        if finetune:
+            for pg in optimizer.param_groups:
+                pg['lr'] = config.finetune_lr
     else:
-        # produce optimizer
         optimizer=torch.optim.Adam(model.parameters(),lr=config.lr,weight_decay=config.weight_decay)
 
     # produce model — use both GPUs if available
@@ -58,27 +62,33 @@ def train(checkpoint_dir:str, resume_path:str=None):
         print(f"Using {torch.cuda.device_count()} GPUs: {[torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]}")
         model = torch.nn.DataParallel(model)
 
+    num_epochs = config.finetune_epochs if finetune else config.epoch
+    lr_start   = config.finetune_lr    if finetune else config.lr
+    scheduler  = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
+    if ckpt and 'scheduler_state_dict' in ckpt and not finetune:
+        scheduler.load_state_dict(ckpt['scheduler_state_dict'])
+
     # produce loss function
     criterion=InfoNCE(negative_mode='paired',temperature=config.temperature)
 
-    
-    wandb.init(project="scarf", 
-               name="train_session", 
+    wandb.init(project="scarf",
+               name="finetune_session" if finetune else "train_session",
                config={
-                    "learning_rate": config.lr,
+                    "learning_rate": lr_start,
                     "batch_size": config.batch_size,
-                    "epoch": config.epoch
+                    "epoch": num_epochs,
+                    "finetune": finetune,
     })
 
     # train
     train_step=0
-    val_step=0 
-    print("start training")
-    for epoch in range(config.epoch):
+    val_step=0
+    print("start {}".format("finetuning" if finetune else "training"))
+    for epoch in range(num_epochs):
         model.train()
         train_length=len(train_dataloader)
         total_loss=0
-        with tqdm(enumerate(train_dataloader), total=train_length, desc=f"Epoch {epoch + 1}/{config.epoch}", disable=False) as t:
+        with tqdm(enumerate(train_dataloader), total=train_length, desc=f"Epoch {epoch + 1}/{num_epochs}", disable=False) as t:
             for i, (pc1, pc2, correspondence) in t:
                 # pc1 batchsize*num_points*3  (XYZ, normalized)
                 # pc2 batchsize*num_points*3
@@ -101,10 +111,18 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
                 positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
 
-                # negative batchsize*num_correspondence*num_negative*feature_dim
-                # negative here is random select not in correspondence
-                # negative_index batchsize*num_correspondence*num_negative
-                negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
+                # negatives: mixed hard+random in finetune mode, pure random otherwise
+                if finetune:
+                    n_hard   = config.n_hard
+                    n_random = config.num_negative - n_hard
+                    pos_xyz  = pc2.gather(1, correspondence[:,:,1].unsqueeze(2).expand(-1,-1,3))
+                    dists    = torch.cdist(pos_xyz, pc2)
+                    dists.scatter_(2, correspondence[:,:,1].unsqueeze(2), float('inf'))
+                    _, hard_idx = torch.topk(dists, n_hard, dim=2, largest=False)
+                    rand_idx    = torch.randint(0, num_points-1, (batchsize, num_correspondence, n_random), device=config.device)
+                    negative_index = torch.cat([hard_idx, rand_idx], dim=2)
+                else:
+                    negative_index = torch.randint(0, num_points-1, (batchsize, num_correspondence, config.num_negative), device=config.device)
                 negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
                 negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
                 negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
@@ -153,16 +171,20 @@ def train(checkpoint_dir:str, resume_path:str=None):
                     os.makedirs(checkpoint_dir, exist_ok=True)
                     torch.save({'epoch':epoch,
                                 'model_state_dict':model.state_dict(),
-                                'optimizer':optimizer},
+                                'optimizer':optimizer,
+                                'scheduler_state_dict':scheduler.state_dict()},
                                 os.path.join(checkpoint_dir,f'checkpoint_{epoch+1}_{i+1}.pth'))
 
-        # Save checkpoint every 50 epochs
+        scheduler.step()
+
         if (epoch + 1) % 2 == 0:
             os.makedirs(checkpoint_dir, exist_ok=True)
+            prefix = 'finetune' if finetune else 'checkpoint'
             torch.save({'epoch':epoch,
                         'model_state_dict':model.state_dict(),
-                        'optimizer':optimizer},
-                        os.path.join(checkpoint_dir,f'checkpoint_epoch_{epoch+1}.pth'))
+                        'optimizer':optimizer,
+                        'scheduler_state_dict':scheduler.state_dict()},
+                        os.path.join(checkpoint_dir,f'{prefix}_epoch_{epoch+1}.pth'))
 
         # model.eval()
         # with torch.no_grad():

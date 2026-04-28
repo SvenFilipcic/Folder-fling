@@ -39,6 +39,9 @@ class train_Config:
         self.batch_num=500
         self.fine_num=150
         self.fine_negative=150
+        self.finetune_lr=1e-4
+        self.finetune_epochs=20
+        self.n_hard=75
         self.smooth_num=64
         self.info_nce_weight=3
         self.num_sparse=10
