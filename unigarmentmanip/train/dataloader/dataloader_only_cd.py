@@ -65,8 +65,8 @@ class Dataset(Dataset):
         priority_visible = sleeve_visible if sleeve_visible else hem_visible
 
         random_points_id, random_points = fps_with_selected(mesh_points_1, visible_mesh_id, priority_visible, random_correspondence_num)
-        pcd_random_points_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1, random_points_id)
-        pcd_random_points_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2, random_points_id)
+        pcd_random_points_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1[:, :3], random_points_id)
+        pcd_random_points_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2[:, :3], random_points_id)
 
         keypoints_id_visible_1 = np.array(pcd_random_points_id_1)
         keypoints_id_visible_2 = np.array(pcd_random_points_id_2)
@@ -75,8 +75,8 @@ class Dataset(Dataset):
 
         # Oversample the priority group so the model gets extra gradient on those points
         if priority_visible:
-            priority_pcd_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1, priority_visible)
-            priority_pcd_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2, priority_visible)
+            priority_pcd_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1[:, :3], priority_visible)
+            priority_pcd_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2[:, :3], priority_visible)
             priority_corr = np.stack([np.array(priority_pcd_id_1), np.array(priority_pcd_id_2)], axis=1)
             priority_corr_repeated = np.tile(priority_corr, (OVERSAMPLE, 1))
             correspondence = np.vstack([correspondence, priority_corr_repeated])
@@ -93,8 +93,8 @@ class Dataset(Dataset):
         npz1, npz2 = self.cross_deformation_pair_path[index]
         npz1 = np.load(npz1)
         npz2 = np.load(npz2)
-        pc1 = npz1['pcd_points']
-        pc2 = npz2['pcd_points']
+        pc1 = npz1['pcd_points'][:, :3]
+        pc2 = npz2['pcd_points'][:, :3]
         correspondence = self.get_cross_deformation_correspondence(index)
 
         return pc1, pc2, correspondence
