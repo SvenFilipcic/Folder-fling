@@ -101,11 +101,15 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
                 positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
 
-                # Hard negative mining: sample spatially nearest points to each positive in pc2
-                pos_xyz = pc2.gather(1, correspondence[:,:,1].unsqueeze(2).expand(-1,-1,3))  # (B, num_corr, 3)
-                dists = torch.cdist(pos_xyz, pc2)                                             # (B, num_corr, N)
-                dists.scatter_(2, correspondence[:,:,1].unsqueeze(2), float('inf'))           # mask out true positive
-                _, negative_index = torch.topk(dists, config.num_negative, dim=2, largest=False)
+                # Mixed negatives: half spatially nearest (hard), half random
+                n_hard   = config.num_negative // 2
+                n_random = config.num_negative - n_hard
+                pos_xyz = pc2.gather(1, correspondence[:,:,1].unsqueeze(2).expand(-1,-1,3))
+                dists = torch.cdist(pos_xyz, pc2)
+                dists.scatter_(2, correspondence[:,:,1].unsqueeze(2), float('inf'))
+                _, hard_idx = torch.topk(dists, n_hard, dim=2, largest=False)               # (B, num_corr, n_hard)
+                rand_idx = torch.randint(0, num_points, (batchsize, num_correspondence, n_random), device=config.device)
+                negative_index = torch.cat([hard_idx, rand_idx], dim=2)                     # (B, num_corr, num_negative)
                 negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
                 negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
                 negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
