@@ -81,7 +81,8 @@ class Dataset(Dataset):
         # Use sleeves as priority seed; fall back to hem if no sleeves visible in both clouds
         priority_visible = sleeve_visible if sleeve_visible else hem_visible
 
-        random_points_id, random_points = fps_with_selected(mesh_points_1, visible_mesh_id, priority_visible, random_correspondence_num)
+        priority_coords = mesh_points_1[priority_visible] if priority_visible else np.zeros((0, 3))
+        random_points_id, random_points = fps_with_selected(mesh_points_1, visible_mesh_id, priority_coords, random_correspondence_num)
         pcd_random_points_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1[:, :3], random_points_id)
         pcd_random_points_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2[:, :3], random_points_id)
 
@@ -110,8 +111,8 @@ class Dataset(Dataset):
         npz1, npz2 = self.cross_deformation_pair_path[index]
         npz1 = np.load(npz1)
         npz2 = np.load(npz2)
-        pc1 = _normalize_pc(npz1['pcd_points'][:, :3])
-        pc2 = _normalize_pc(npz2['pcd_points'][:, :3])
+        pc1 = npz1['pcd_points'][:, :3]
+        pc2 = npz2['pcd_points'][:, :3]
         correspondence = self.get_cross_deformation_correspondence(index)
 
         return pc1, pc2, correspondence
