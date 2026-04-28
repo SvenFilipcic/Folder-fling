@@ -39,10 +39,10 @@ def train(checkpoint_dir:str, resume_path:str=None):
     train_dataloader=DataLoader(train_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=True,
-                                 num_workers=config.num_workers)
+                                 num_workers=0)
       
     
-    model=Sofa_Model(normal_channel=False, feature_dim=config.feature_dim)
+    model=Sofa_Model(feature_dim=config.feature_dim)
 
     if resume_path:
         print("resume from {}".format(resume_path))
@@ -101,15 +101,10 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 query=pc1_output.gather(1,correspondence[:,:,0].unsqueeze(2).expand(-1,-1,feature_dim))
                 positive=pc2_output.gather(1,correspondence[:,:,1].unsqueeze(2).expand(-1,-1,feature_dim))
 
-                # Mixed negatives: half spatially nearest (hard), half random
-                n_hard   = config.num_negative // 2
-                n_random = config.num_negative - n_hard
-                pos_xyz = pc2.gather(1, correspondence[:,:,1].unsqueeze(2).expand(-1,-1,3))
-                dists = torch.cdist(pos_xyz, pc2)
-                dists.scatter_(2, correspondence[:,:,1].unsqueeze(2), float('inf'))
-                _, hard_idx = torch.topk(dists, n_hard, dim=2, largest=False)               # (B, num_corr, n_hard)
-                rand_idx = torch.randint(0, num_points, (batchsize, num_correspondence, n_random), device=config.device)
-                negative_index = torch.cat([hard_idx, rand_idx], dim=2)                     # (B, num_corr, num_negative)
+                # negative batchsize*num_correspondence*num_negative*feature_dim
+                # negative here is random select not in correspondence
+                # negative_index batchsize*num_correspondence*num_negative
+                negative_index=torch.randint(0,num_points-1,(batchsize,num_correspondence,config.num_negative)).to(config.device)
                 negative_index=negative_index.reshape(batchsize,num_correspondence*config.num_negative)
                 negative=pc2_output.gather(1,negative_index.unsqueeze(2).expand(-1,-1,feature_dim))
                 negative=negative.reshape(batchsize,num_correspondence,config.num_negative,feature_dim)
@@ -122,7 +117,6 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 loss=criterion(query,positive,negative)
                 optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
                 total_loss+=loss.item()
@@ -157,18 +151,16 @@ def train(checkpoint_dir:str, resume_path:str=None):
                 
                 if (i+1) % 100 == 0:
                     os.makedirs(checkpoint_dir, exist_ok=True)
-                    state = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
                     torch.save({'epoch':epoch,
-                                'model_state_dict':state,
+                                'model_state_dict':model.state_dict(),
                                 'optimizer':optimizer},
                                 os.path.join(checkpoint_dir,f'checkpoint_{epoch+1}_{i+1}.pth'))
 
         # Save checkpoint every 50 epochs
         if (epoch + 1) % 2 == 0:
             os.makedirs(checkpoint_dir, exist_ok=True)
-            state = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
             torch.save({'epoch':epoch,
-                        'model_state_dict':state,
+                        'model_state_dict':model.state_dict(),
                         'optimizer':optimizer},
                         os.path.join(checkpoint_dir,f'checkpoint_epoch_{epoch+1}.pth'))
 

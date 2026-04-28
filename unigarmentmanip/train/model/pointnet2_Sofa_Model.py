@@ -16,15 +16,15 @@ class Sofa_Model(nn.Module):
         else:
             additional_channel = 0
         self.normal_channel = normal_channel
-        self.sa1 = PointNetSetAbstraction(npoint=2048, radius=0.2, nsample=32, in_channel=6+additional_channel, mlp=[64, 64, 128], group_all=False)
-        self.sa2 = PointNetSetAbstraction(npoint=512, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
+        self.sa1 = PointNetSetAbstraction(npoint=1024, radius=0.2, nsample=32, in_channel=6+additional_channel, mlp=[64, 64, 128], group_all=False)
+        self.sa2 = PointNetSetAbstraction(npoint=256, radius=0.4, nsample=64, in_channel=128 + 3, mlp=[128, 128, 256], group_all=False)
         self.sa3 = PointNetSetAbstraction(npoint=None, radius=None, nsample=None, in_channel=256 + 3, mlp=[256, 512, 1024], group_all=True)
         self.fp3 = PointNetFeaturePropagation(in_channel=1280, mlp=[256, 256])
         self.fp2 = PointNetFeaturePropagation(in_channel=384, mlp=[256, 128])
         self.fp1 = PointNetFeaturePropagation(in_channel=128+6+additional_channel, mlp=[128, 128, 128])
         self.conv1 = nn.Conv1d(128, 128, 1)
         self.bn1 = nn.BatchNorm1d(128)
-        self.drop1 = nn.Dropout(0.2)
+        self.drop1 = nn.Dropout(0.5)
         self.conv2 = nn.Conv1d(128, feature_dim, 1)  # 输出 feature_dim 维特征向量
 
     def forward(self, xyz):
@@ -58,11 +58,7 @@ if __name__ == '__main__':
 
     import numpy as np
     model = Sofa_Model(128).to('cuda')
-    points = np.load("dress_data\\cross_deformation\\0_DLLS_Dress132_obj\\p_0.npz")['points']
-    points = np.reshape(points, (1, -1, 3))# .transpose(0, 2, 1)
-
-    points = np.random.rand(16, 2048, 3)
-
+    points = np.random.rand(16, 4096, 3)
     print(points.shape)
     output = model(torch.from_numpy(points).float().cuda())
     print(output.shape)

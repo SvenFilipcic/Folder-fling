@@ -5,23 +5,6 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-
-def _normalize_pc(pc: np.ndarray) -> np.ndarray:
-    """Center XYZ to zero-mean unit sphere; re-normalize normal vectors to unit length."""
-    pc = pc.copy()
-    xyz = pc[:, :3]
-    centroid = xyz.mean(axis=0)
-    xyz -= centroid
-    scale = np.max(np.linalg.norm(xyz, axis=1))
-    if scale > 0:
-        xyz /= scale
-    pc[:, :3] = xyz
-    if pc.shape[1] > 3:
-        lengths = np.linalg.norm(pc[:, 3:6], axis=1, keepdims=True)
-        lengths = np.where(lengths == 0, 1.0, lengths)
-        pc[:, 3:6] /= lengths
-    return pc
-
 from dataloader.utils import get_deformation_paths, create_cross_deformation_pairs, create_cross_object_pairs, fps_with_selected, nearest_mesh2pcd, create_cross_only_deformation_pairs
 from base.config import Config
 
@@ -81,10 +64,9 @@ class Dataset(Dataset):
         # Use sleeves as priority seed; fall back to hem if no sleeves visible in both clouds
         priority_visible = sleeve_visible if sleeve_visible else hem_visible
 
-        priority_coords = mesh_points_1[priority_visible] if priority_visible else np.zeros((0, 3))
-        random_points_id, random_points = fps_with_selected(mesh_points_1, visible_mesh_id, priority_coords, random_correspondence_num)
-        pcd_random_points_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1[:, :3], random_points_id)
-        pcd_random_points_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2[:, :3], random_points_id)
+        random_points_id, random_points = fps_with_selected(mesh_points_1, visible_mesh_id, priority_visible, random_correspondence_num)
+        pcd_random_points_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1, random_points_id)
+        pcd_random_points_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2, random_points_id)
 
         keypoints_id_visible_1 = np.array(pcd_random_points_id_1)
         keypoints_id_visible_2 = np.array(pcd_random_points_id_2)
@@ -93,8 +75,8 @@ class Dataset(Dataset):
 
         # Oversample the priority group so the model gets extra gradient on those points
         if priority_visible:
-            priority_pcd_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1[:, :3], priority_visible)
-            priority_pcd_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2[:, :3], priority_visible)
+            priority_pcd_id_1 = nearest_mesh2pcd(mesh_points_1, pcd_points_1, priority_visible)
+            priority_pcd_id_2 = nearest_mesh2pcd(mesh_points_2, pcd_points_2, priority_visible)
             priority_corr = np.stack([np.array(priority_pcd_id_1), np.array(priority_pcd_id_2)], axis=1)
             priority_corr_repeated = np.tile(priority_corr, (OVERSAMPLE, 1))
             correspondence = np.vstack([correspondence, priority_corr_repeated])
@@ -111,8 +93,8 @@ class Dataset(Dataset):
         npz1, npz2 = self.cross_deformation_pair_path[index]
         npz1 = np.load(npz1)
         npz2 = np.load(npz2)
-        pc1 = npz1['pcd_points'][:, :3]
-        pc2 = npz2['pcd_points'][:, :3]
+        pc1 = npz1['pcd_points']
+        pc2 = npz2['pcd_points']
         correspondence = self.get_cross_deformation_correspondence(index)
 
         return pc1, pc2, correspondence

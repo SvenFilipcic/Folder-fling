@@ -20,7 +20,7 @@ class data_Config:
         self.distance_control=0.25
         self.distance_var=0.5
         self.distance_threshold=0.5
-        self.correspondence_num=60  #########
+        self.correspondence_num=30  #########
         self.keypoints_correspondence_num=8
 
 class train_Config:
@@ -32,8 +32,8 @@ class train_Config:
         self.weight_decay=1e-5
         self.device=torch.device('cuda')
         self.temperature=0.1
-        self.num_negative=300
-        self.correspondence_num=60   #######
+        self.num_negative=150
+        self.correspondence_num=30   #######
         self.feature_dim=512
         self.distance_threshold=0.05   # ##
         self.batch_num=500
@@ -60,7 +60,7 @@ class c2f_Config:
         self.distance_control=0.25
         self.distance_var=0.5
         self.distance_threshold=0.5
-        self.correspondence_num=60  #########
+        self.correspondence_num=30  #########
         self.keypoints_correspondence_num=8
         
         self.lr=0.001
