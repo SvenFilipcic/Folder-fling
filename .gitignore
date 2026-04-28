@@ -4,7 +4,7 @@ __pycache__/
 *.pyd
 
 # Training data — bring on USB, don't commit
-data/majca/**/*.npz
+data/majca/
 
 # Generated checkpoints — bring on USB if resuming
 unigarmentmanip/checkpoints/
