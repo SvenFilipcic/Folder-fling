@@ -39,7 +39,8 @@ def train(checkpoint_dir:str, resume_path:str=None, finetune:bool=False):
     train_dataloader=DataLoader(train_dataset,
                                  batch_size=config.batch_size,
                                  shuffle=True,
-                                 num_workers=0)
+                                 num_workers=4,
+                                 pin_memory=True)
 
 
     model=Sofa_Model(feature_dim=config.feature_dim)
