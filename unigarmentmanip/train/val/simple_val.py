@@ -40,13 +40,7 @@ def cal_inference_pair(feature1,feature2,correspondence):
     query=F.normalize(query,dim=-1)
     feature2=F.normalize(feature2,dim=-1)
     #inferece batchsize*num_correspondence
-    inference=torch.zeros(batchsize,num_correspondence).to(config.device)
-    # for i in range(batchsize):
-    #     for j in range(num_correspondence):
-    #         inference[i,j]=torch.argmax(torch.sum(query[i,j]*feature2[i],dim=1,keepdim=True))
-    # inference = torch.argmax(torch.sum(query[:,:,None,:] * feature2[:,None,:,:],dim=3),dim=2)# b x n x n x d
-    for i in range(batchsize):
-        inference[i]=torch.argmax(torch.sum(query[i,:,None,:]*feature2[i,None,:,:],dim=2),dim=1)
+    inference = torch.argmax(torch.matmul(query, feature2.transpose(1, 2)), dim=2).float()
     return inference
 
 
